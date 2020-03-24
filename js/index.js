@@ -1,0 +1,5 @@
+var Calculadora = {
+  init: function(){
+    
+  }
+}
