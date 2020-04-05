@@ -1,15 +1,15 @@
 //declaramos el objeto calculadora con todas sus variables y funciones.
 var Calculadora = {
   init: function(){
-  //atributos generales
-    var datos = {
+  //atributos generales y asignación de eventos a los botones.
+    var datos = { //objeto que inicializa las variables de las operaciones.
       numero1: "0",
       numero2: "0",
       operacion: "",
       resultado: "",
-      continue: 1
+      continue: 2 //propiedad de se usa para controlar la funcionalidad de secuencia de operaciones al presionar el boton =.
     };
-    localStorage.setItem('datos', JSON.stringify(datos));
+    localStorage.setItem('datos', JSON.stringify(datos)); //Se almacenan el objeto datos en el WebStorage para fácil acceso.
     this.asignarEventosTeclas('tecla');
     this.eventoAddPunto();
     document.getElementById('on').onclick = this.reiniciarCaja;
@@ -18,7 +18,7 @@ var Calculadora = {
     document.getElementById('menos').onclick = this.eventoOperacionTeclas;
     document.getElementById('por').onclick = this.eventoOperacionTeclas;
     document.getElementById('dividido').onclick = this.eventoOperacionTeclas;
-    document.getElementById('igual').onclick = this.eventoResolver;
+    document.getElementById('igual').onclick = this.eventoOperacionTeclas;
   },
 //método que asigna los eventos generales de las teclas (efecto de click, agregar el número al display).
   asignarEventosTeclas: function(selector){
@@ -42,12 +42,18 @@ var Calculadora = {
 //método que agrega un número al display.
   eventoAddNumero: function(event){
     var cajaNumeros = document.getElementById('display');
+    var datos = JSON.parse(localStorage.getItem('datos'));
     var numero = event.currentTarget.id;
+
     if((cajaNumeros.textContent == "0")&&(numero != 'on')&&(numero != 'sign')&&(numero != 'raiz')&&(numero != 'dividido')&&(numero != 'por')&&(numero != 'menos')&&(numero != 'punto')&&(numero != 'igual')&&(numero != 'mas')){
           cajaNumeros.textContent = numero;
     } else if((numero != 'on')&&(numero != 'sign')&&(numero != 'raiz')&&(numero != 'dividido')&&(numero != 'por')&&(numero != 'menos')&&(numero != 'punto')&&(numero != 'igual')&&(numero != 'mas')){
           cajaNumeros.textContent = cajaNumeros.textContent + numero;
-        cajaNumeros.textContent = this.limitarCaracteres();
+        cajaNumeros.textContent = self.limitarCaracteres(cajaNumeros.textContent);
+              if(datos.continue == 3){ //true indica que se acaba de dar un resultado y se debe iniciar nuevamente los parametros.
+                self.reiniciarCaja();
+                cajaNumeros.textContent = numero;
+              };
     }
   },
 //método para validar y agregar el punto.
@@ -56,17 +62,18 @@ var Calculadora = {
     var separador = ".";
     self = this;
     document.getElementById('punto').addEventListener('click', function(){
+      var datos = JSON.parse(localStorage.getItem('datos'));
       var validarPunto = cajaNumeros.textContent.split(separador);
       if(cajaNumeros.textContent == "0"){
         cajaNumeros.textContent = cajaNumeros.textContent + ".";
       } else if(validarPunto.length <= 1){
         cajaNumeros.textContent = cajaNumeros.textContent + ".";
-      }
-      self.limitarCaracteres();
-        /*var limite = "0";
-        limite = cajaNumeros.textContent;
-        limite = limite.slice(0,8);
-        cajaNumeros.textContent = limite;*/
+      };
+      if(datos.continue == 3){ //si la caja tiene un resultado(se presionó el igual) y no se selecciona una nueva operación.
+        self.reiniciarCaja();
+        cajaNumeros.textContent = "0.";
+      };
+      cajaNumeros.textContent = self.limitarCaracteres(cajaNumeros.textContent);
     })
   },
 //método para convertir números positivos a negativos y viceversa.
@@ -89,18 +96,18 @@ var Calculadora = {
     datos.numero2 = "0";
     datos.operacion = "";
     datos.resultado = "";
+    datos.continue = 2
     localStorage.setItem('datos', JSON.stringify(datos));
   },
-//metodo para limitar caracteres en el display
+//metodo para limitar caracteres en el display.
   limitarCaracteres: function(){
     var cajaNumeros = document.getElementById('display');
     var limite = "0";
     limite = cajaNumeros.textContent;
     limite = limite.slice(0,8);
-    cajaNumeros.textContent = limite;
     return limite;
   },
-//método que selecciona el tipo de operación.
+//método que selecciona el tipo de operación y asigna el valor a las variables.
   eventoOperacionTeclas: function(event){
     var cajaNumeros = document.getElementById('display');
     var operador = event.currentTarget.id;
@@ -109,33 +116,51 @@ var Calculadora = {
     case "mas":
       datos.numero1 = cajaNumeros.textContent;
       datos.operacion = "+";
+      datos.continue = 1;
+      cajaNumeros.textContent = "";
       break;
     case "menos":
       datos.numero1 = cajaNumeros.textContent;
       datos.operacion = "-";
+      datos.continue = 1;
+      cajaNumeros.textContent = "";
       break;
     case "por":
       datos.numero1 = cajaNumeros.textContent;
       datos.operacion = "*";
+      datos.continue = 1;
+      cajaNumeros.textContent = "";
       break;
     case "dividido":
       datos.numero1 = cajaNumeros.textContent;
       datos.operacion = "/";
+      datos.continue = 1;
+      cajaNumeros.textContent = "";
       break;
-  }
-  datos.continue = 1;
-  localStorage.setItem('datos',JSON.stringify(datos));
-  cajaNumeros.textContent = "";
-},
-//método para realizar la operación seleccionada.
-  eventoResolver: function(){
+    case "igual":
     if (localStorage.datos){
       var datos = JSON.parse(localStorage.getItem('datos'))
-    }
-    var cajaNumeros = document.getElementById('display');
+    };
     if (datos.continue == 1){
       datos.numero2 = cajaNumeros.textContent;
-    }
+    };
+    if (cajaNumeros.textContent == ""){
+      cajaNumeros.textContent = "0";
+      datos.numero1 = "0";
+      datos.numero2 = "0";
+    };
+      cajaNumeros.textContent= self.eventoResolver(datos); //invoca el método para resolver la operación.
+      datos.numero1 = cajaNumeros.textContent;
+      datos.continue = 3;
+      localStorage.setItem('datos',JSON.stringify(datos));
+      cajaNumeros.textContent = self.limitarCaracteres();
+      break;
+  }
+  localStorage.setItem('datos',JSON.stringify(datos));
+},
+//método para realizar la operación seleccionada.
+  eventoResolver: function(datos){
+    var cajaNumeros = document.getElementById('display');
     var operador = datos.operacion;
     switch(operador) {
     case "+":
@@ -153,11 +178,7 @@ var Calculadora = {
       default:
       datos.resultado = "0";
   }
-  cajaNumeros.textContent = datos.resultado;
-  datos.numero1 = cajaNumeros.textContent;
-  datos.continue = 2;
-  localStorage.setItem('datos',JSON.stringify(datos));
-  this.limitarCaracteres();
+  return datos.resultado; //retorna el resultado al eventoOperacionTeclas.
   }
 
 }
